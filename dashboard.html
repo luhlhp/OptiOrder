@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Painel Principal</title>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { margin: 0; font-size: 24px; }
+        .btn-logout {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+        .card .icon { font-size: 40px; margin-bottom: 10px; }
+        .card h3 { margin: 10px 0 5px 0; color: #007bff; }
+        .card p { margin: 0; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="dashboard.html" title="Ir para a tela inicial">
+            <img src="oculos.png" alt="Descrição da foto" width="50" height="50">
+        </a>
+            <h1>OptiOrder - Painel de Controle</h1>
+        <a href="dashboard.html" class="btn-logout">Sair</a>
+    </div>
+
+    <div class="container">
+        <h2>Selecione o setor que deseja gerenciar:</h2>
+        
+        <div class="cards-grid">
+            
+            <a href="oticas.html" class="card">
+                <h3>Óticas / Lojas</h3>
+                <p>Cadastrar e listar filiais das óticas</p>
+            </a>
+
+            <a href="produtos.html" class="card">
+                <h3>Produtos / Óculos</h3>
+                <p>Gestão do catálogo de armações e lentes</p>
+            </a>
+
+            <a href="marcas.html" class="card">
+                <h3>Marcas</h3>
+                <p>Cadastrar e visualizar marcas parceiras</p>
+            </a>
+
+            <a href="usuarios.html" class="card">
+                  <h3>Usuários</h3>
+                <p>Gerenciar acessos e novos usuários</p>
+            </a>
+
+        </div>
+    </div>
+
+</body>
+</html>

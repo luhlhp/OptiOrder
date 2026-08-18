@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f6f9; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        h2 { color: #333; margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #218838; }
+        .erro { color: red; font-size: 14px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>OptiOrder 🕶️</h2>
+        <input type="email" id="email" value="lucas@optiorder.com" placeholder="E-mail" autocomplete="email">
+        <input type="password" id="senha" value="123456" placeholder="Senha" autocomplete="current-password">
+        
+        <!-- O clique dispara a função fazerLogin() diretamente -->
+        <button type="button" onclick="fazerLogin()">Acessar Sistema</button>
+        
+        <p id="mensagemErro" class="erro"></p>
+    </div>
+
+    <script>
+        async function fazerLogin() {
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const msg = document.getElementById('mensagemErro');
+
+            msg.innerText = "Conectando...";
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, senha: senha })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`Login efetuado com sucesso! Bem-vindo(a), ${data.usuario.nome}`);
+                    // Redireciona para a página de óticas
+                    window.location.href = 'oticas.html';
+                } else {
+                    msg.innerText = 'E-mail ou senha incorretos!';
+                }
+            } catch (err) {
+                msg.innerText = 'Erro ao conectar no servidor Python! Verifique o terminal.';
+            }
+        }
+    </script>
+
+</body>
+</html>

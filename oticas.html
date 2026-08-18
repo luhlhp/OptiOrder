@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Gestão de Óticas</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2, h3 { color: #2c3e50; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { grid-column: span 2; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>OptiOrder 🕶️ - Cadastro de Óticas</h2>
+        
+        <!-- Formulário de Cadastro -->
+        <form id="formOtica">
+            <div class="form-grid">
+                <input type="text" id="nome" placeholder="Nome da Ótica" required>
+                <input type="text" id="cnpj" placeholder="CNPJ (ex: 00.000.000/0001-00)" required>
+                <input type="text" id="telefone" placeholder="Telefone">
+                <input type="email" id="email" placeholder="E-mail de Contato">
+                <button type="submit">Cadastrar Ótica</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <!-- Tabela de Listagem -->
+        <h3>Óticas Cadastradas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>CNPJ</th>
+                    <th>Telefone</th>
+                    <th>E-mail</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaOticas">
+                <!-- Preenchido via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/oticas';
+
+        // Carregar óticas cadastradas ao abrir a página
+        async function carregarOticas() {
+            try {
+                const res = await fetch(API_URL);
+                const oticas = await res.json();
+                const tbody = document.getElementById('tabelaOticas');
+                tbody.innerHTML = '';
+
+                oticas.forEach(o => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${o.id}</td>
+                            <td>${o.nome}</td>
+                            <td>${o.cnpj}</td>
+                            <td>${o.telefone || '-'}</td>
+                            <td>${o.email || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Erro ao carregar óticas:", err);
+            }
+        }
+
+        // Enviar nova ótica para a API Python
+        document.getElementById('formOtica').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const novaOtica = {
+                nome: document.getElementById('nome').value,
+                cnpj: document.getElementById('cnpj').value,
+                telefone: document.getElementById('telefone').value,
+                email: document.getElementById('email').value
+            };
+
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(novaOtica)
+            });
+
+            if (res.ok) {
+                alert('Ótica cadastrada com sucesso!');
+                document.getElementById('formOtica').reset();
+                carregarOticas();
+            } else {
+                alert('Erro ao cadastrar ótica.');
+            }
+        });
+
+        // Executa ao carregar a página
+        carregarOticas();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Cadastro de Marcas</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 450px; }
+        h2 { color: #333; margin-bottom: 20px; text-align: center; }
+        label { display: block; margin-top: 10px; font-weight: bold; color: #555; }
+        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        button:hover { background-color: #218838; }
+        .mensagem { margin-top: 15px; font-weight: bold; text-align: center; }
+        .sucesso { color: green; }
+        .erro { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .voltar { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Cadastro de Marcas 🏷️</h2>
+        <form id="formMarca">
+            <label for="nome">Nome da Marca:</label>
+            <input type="text" id="nome" required placeholder="Ex: Ray-Ban, Oakley, Gucci">
+
+            <button type="submit">Salvar Marca</button>
+        </form>
+
+        <p id="mensagem" class="mensagem"></p>
+
+        <h3>Marcas Cadastradas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaMarcas">
+                <!-- Preenchido via JavaScript -->
+            </tbody>
+        </table>
+
+        <a href="oticas.html" class="voltar">← Ir para Gestão de Óticas</a>
+    </div>
+
+    <script>
+        // Função para carregar e listar as marcas na tabela
+        async function carregarMarcas() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/marcas');
+                const marcas = await res.json();
+                const tabela = document.getElementById('tabelaMarcas');
+                tabela.innerHTML = '';
+
+                marcas.forEach(m => {
+                    tabela.innerHTML += `<tr><td>${m.id}</td><td>${m.nome}</td></tr>`;
+                });
+            } catch (e) {
+                console.error("Erro ao carregar marcas", e);
+            }
+        }
+
+        // Formulário de Cadastro
+        document.getElementById('formMarca').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const msg = document.getElementById('mensagem');
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/marcas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+
+                if (res.ok) {
+                    msg.innerText = "Marca cadastrada com sucesso!";
+                    msg.className = "mensagem sucesso";
+                    document.getElementById('nome').value = '';
+                    carregarMarcas(); // Recarrega a tabela
+                } else {
+                    msg.innerText = "Erro ao cadastrar marca.";
+                    msg.className = "mensagem erro";
+                }
+            } catch (err) {
+                msg.innerText = "Erro ao conectar com o servidor.";
+                msg.className = "mensagem erro";
+            }
+        });
+
+        // Carrega a lista de marcas ao abrir a página
+        carregarMarcas();
+    </script>
+
+</body>
+</html>

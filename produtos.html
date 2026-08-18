@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Gestão de Produtos</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 600px; }
+        h2 { color: #333; margin-bottom: 20px; text-align: center; }
+        label { display: block; margin-top: 10px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        button:hover { background-color: #0056b3; }
+        .mensagem { margin-top: 15px; font-weight: bold; text-align: center; }
+        .sucesso { color: green; }
+        .erro { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+        th { background-color: #28a745; color: white; }
+        .voltar { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Cadastro de Produtos 🕶️</h2>
+        <form id="formProduto">
+            <label for="codigo">Código (Único):</label>
+            <input type="text" id="codigo" required placeholder="Ex: OC-001">
+
+            <label for="modelo">Modelo:</label>
+            <input type="text" id="modelo" required placeholder="Ex: Aviador RB3025">
+
+            <label for="cor">Cor:</label>
+            <input type="text" id="cor" required placeholder="Ex: Dourado / Pretomatt">
+
+            <label for="tipo">Tipo:</label>
+            <select id="tipo" required>
+                <option value="solar">Solar</option>
+                <option value="receituario">Receituário</option>
+            </select>
+
+            <label for="preco">Preço (R$):</label>
+            <input type="number" step="0.01" id="preco" required placeholder="Ex: 499.90">
+
+            <label for="marca_id">Marca:</label>
+            <select id="marca_id" required>
+                <option value="">Selecione uma marca...</option>
+            </select>
+
+            <button type="submit">Salvar Produto</button>
+        </form>
+
+        <p id="mensagem" class="mensagem"></p>
+
+        <h3>Produtos Cadastrados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Modelo</th>
+                    <th>Cor</th>
+                    <th>Tipo</th>
+                    <th>Preço</th>
+                    <th>Marca</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaProdutos"></tbody>
+        </table>
+
+        <a href="oticas.html" class="voltar">← Ir para Gestão de Óticas</a>
+    </div>
+
+    <script>
+        async function carregarMarcasSelect() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/marcas');
+                const marcas = await res.json();
+                const select = document.getElementById('marca_id');
+                select.innerHTML = '<option value="">Selecione uma marca...</option>';
+                marcas.forEach(m => {
+                    select.innerHTML += `<option value="${m.id}">${m.nome}</option>`;
+                });
+            } catch (e) {
+                console.error("Erro ao carregar marcas", e);
+            }
+        }
+
+        async function carregarProdutos() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/produtos');
+                const produtos = await res.json();
+                const tabela = document.getElementById('tabelaProdutos');
+                tabela.innerHTML = '';
+
+                produtos.forEach(p => {
+                    tabela.innerHTML += `
+                        <tr>
+                            <td>${p.codigo}</td>
+                            <td>${p.modelo}</td>
+                            <td>${p.cor}</td>
+                            <td>${p.tipo}</td>
+                            <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
+                            <td>${p.marca || 'Sem marca'}</td>
+                        </tr>`;
+                });
+            } catch (e) {
+                console.error("Erro ao carregar produtos", e);
+            }
+        }
+
+        document.getElementById('formProduto').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const dados = {
+                codigo: document.getElementById('codigo').value,
+                modelo: document.getElementById('modelo').value,
+                cor: document.getElementById('cor').value,
+                tipo: document.getElementById('tipo').value,
+                preco: parseFloat(document.getElementById('preco').value),
+                marca_id: parseInt(document.getElementById('marca_id').value)
+            };
+            const msg = document.getElementById('mensagem');
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/produtos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (res.ok) {
+                    msg.innerText = "Produto cadastrado com sucesso!";
+                    msg.className = "mensagem sucesso";
+                    document.getElementById('formProduto').reset();
+                    carregarProdutos();
+                } else {
+                    const erroData = await res.json();
+                    msg.innerText = erroData.detail || "Erro ao cadastrar produto.";
+                    msg.className = "mensagem erro";
+                }
+            } catch (err) {
+                msg.innerText = "Erro ao conectar com o servidor.";
+                msg.className = "mensagem erro";
+            }
+        });
+
+        carregarMarcasSelect();
+        carregarProdutos();
+    </script>
+
+</body>
+</html>

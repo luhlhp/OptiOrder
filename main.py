@@ -116,3 +116,79 @@ def cadastrar_produto(produto: ProdutoSchema):
     cursor.close()
     conn.close()
     return {"mensagem": "Produto cadastrado!", "id": nova_id}
+
+# Schema para receber os dados do novo usuário
+class UsuarioSchema(BaseModel):
+    nome: str
+    email: str
+    senha: str
+
+@app.post("/usuarios")
+def cadastrar_usuario(usuario: UsuarioSchema):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verifica se o e-mail já está cadastrado
+        cursor.execute("SELECT id FROM usuarios WHERE email = %s", (usuario.email,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="E-mail já cadastrado!")
+
+        # Insere o novo usuário no banco
+        query = "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)"
+        cursor.execute(query, (usuario.nome, usuario.email, usuario.senha))
+        conn.commit()
+        
+        return {"mensagem": "Usuário cadastrado com sucesso!"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# Schema para receber os dados do produto
+class ProdutoSchema(BaseModel):
+    codigo: str
+    modelo: str
+    cor: str
+    tipo: str  # 'solar' ou 'receituario'
+    preco: float
+    marca_id: int
+
+@app.post("/produtos")
+def cadastrar_produto(dados: ProdutoSchema):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        query = """
+            INSERT INTO produtos (codigo, modelo, cor, tipo, preco, marca_id) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(query, (dados.codigo, dados.modelo, dados.cor, dados.tipo, dados.preco, dados.marca_id))
+        conn.commit()
+        return {"mensagem": "Produto cadastrado com sucesso!"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/produtos")
+def listar_produtos():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    try:
+        query = """
+            SELECT p.id, p.codigo, p.modelo, p.cor, p.tipo, p.preco, m.nome AS marca 
+            FROM produtos p 
+            LEFT JOIN marcas m ON p.marca_id = m.id
+        """
+        cursor.execute(query)
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()

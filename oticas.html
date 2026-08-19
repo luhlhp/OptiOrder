@@ -28,7 +28,7 @@
             <div class="form-grid">
                 <input type="text" id="nome" placeholder="Nome da Ótica" required>
                 <input type="text" id="cnpj" placeholder="CNPJ (ex: 00.000.000/0001-00)" required>
-                <input type="text" id="telefone" placeholder="Telefone">
+                <input type="tel" id="telefone" placeholder="Telefone (ex:(11) 00000-0000)">
                 <input type="email" id="email" placeholder="E-mail de Contato">
                 <button type="submit">Cadastrar Ótica</button>
             </div>
@@ -55,8 +55,8 @@
         </table>
             <a href="dashboard.html" class="voltar">← Ir para Menu</a>
     </div>
-
     <script>
+       
         const API_URL = 'http://127.0.0.1:8000/oticas';
 
         // Carregar óticas cadastradas ao abrir a página

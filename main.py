@@ -1,6 +1,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_connection
 
 app = FastAPI(title="OptiOrder API")
@@ -22,7 +22,7 @@ class LoginSchema(BaseModel):
 class OticaSchema(BaseModel):
     nome: str
     cnpj: str
-    telefone: str | None = None
+    telefone: str | None = Field
     email: str | None = None
 
 class MarcaSchema(BaseModel):

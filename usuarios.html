@@ -39,6 +39,20 @@
         <a href="index.html" class="voltar">← Voltar para o Login</a>
     </div>
 
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>E-mail</th>
+        </tr>
+    </thead>
+    <tbody id="tabelaUsuarios">
+        <!-- O JavaScript vai inserir as linhas aqui -->
+    </tbody>
+</table>
+
     <script>
         document.getElementById('formUsuario').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -64,6 +78,11 @@
                     msg.innerText = "Usuário cadastrado com sucesso!";
                     msg.className = "mensagem sucesso";
                     document.getElementById('formUsuario').reset();
+
+                     setTimeout(() => {
+                         window.location.href = "dashboard.html";
+                     }, 1500);
+
                 } else {
                     msg.innerText = data.detail || "Erro ao cadastrar usuário.";
                     msg.className = "mensagem erro";
@@ -73,6 +92,29 @@
                 msg.className = "mensagem erro";
             }
         });
+
+        async function carregarUsuarios() {
+    // Busca os usuários cadastrados no Python
+    const response = await fetch('http://127.0.0.1:8000/usuarios');
+    const usuarios = await response.json();
+    
+    const tabela = document.getElementById('tabelaUsuarios');
+    tabela.innerHTML = ''; // Limpa a tabela antes de preencher
+
+    // Insere cada usuário retornado do banco na tabela
+    usuarios.forEach(usuario => {
+        tabela.innerHTML += `
+            <tr>
+                <td>${usuario.id}</td>
+                <td>${usuario.nome}</td>
+                <td>${usuario.email}</td>
+            </tr>
+        `;
+    });
+}
+
+// Executa a função assim que a página carrega
+carregarUsuarios();
     </script>
 
 </body>

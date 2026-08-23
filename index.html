@@ -46,7 +46,7 @@
                     const data = await response.json();
                     alert(`Login efetuado com sucesso! Bem-vindo(a), ${data.usuario.nome}`);
                     // Redireciona para a página de óticas
-                    window.location.href = 'oticas.html';
+                    window.location.href = "dashboard.html";
                 } else {
                     msg.innerText = 'E-mail ou senha incorretos!';
                 }

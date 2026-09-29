@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiOrder - Lançamento de Pedidos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input, button { padding: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .totais { background: #e9ecef; padding: 15px; margin-top: 15px; border-radius: 5px; text-align: right; font-size: 1.1em; }
+        .btn-add { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-finalizar { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; padding: 12px; font-size: 1.1em; }
+        .btn-danger { background-color: #dc3545; color: white; border: none; cursor: pointer; padding: 4px 8px; width: auto; }
+        .btn-voltar { background-color: #6c757d; color: white; border: none; cursor: pointer; margin-bottom: 20px; width: auto; text-decoration: none; display: inline-block; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="dashboard.html" class="btn-voltar">← Ir para o Menu</a>
+    <h1>Lançamento de Pedido (AC2)</h1>
+
+    <!-- 1. SELEÇÃO DA ÓTICA -->
+    <div class="form-group">
+        <label for="selectOtica">1. Selecionar a Ótica:</label>
+        <select id="selectOtica">
+            <option value="">Carregando óticas...</option>
+        </select>
+    </div>
+
+    <hr>
+
+    <!-- 2. SELEÇÃO DE PRODUTOS -->
+    <h2>Adicionar Produtos</h2>
+    <div class="row">
+        <div>
+            <label for="selectProduto">Produto:</label>
+            <select id="selectProduto">
+                <option value="">Carregando produtos...</option>
+            </select>
+        </div>
+        <div>
+            <label for="qtdProduto">Quantidade:</label>
+            <input type="number" id="qtdProduto" min="1" value="1">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+            <button type="button" class="btn-add" onclick="adicionarProduto()">+ Adicionar</button>
+        </div>
+    </div>
+
+    <!-- 3. TABELA/CARRINHO DO PEDIDO -->
+    <h2>Itens do Pedido</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Preço Un.</th>
+                <th>Quantidade</th>
+                <th>Subtotal</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaItens">
+            <tr>
+                <td colspan="5" style="text-align: center; color: #888;">Nenhum produto adicionado ao pedido.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 4. CÁLCULO DOS TOTAIS -->
+    <div class="totais">
+        <p>Qtd. Total de Produtos: <strong id="lblQtdTotal">0</strong></p>
+        <p>Valor Total do Pedido: <strong>R$ <span id="lblValorTotal">0.00</span></strong></p>
+    </div>
+
+    <br>
+    <button type="button" class="btn-finalizar" onclick="finalizarPedido()">Finalizar Pedido</button>
+</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+    let produtosDisponiveis = [];
+    let carrinho = [];
+
+    // Carregar Óticas e Produtos ao abrir a tela
+    window.onload = async function() {
+        await carregarOticas();
+        await carregarProdutos();
+    };
+
+    async function carregarOticas() {
+        const res = await fetch(`${API_URL}/oticas`);
+        const oticas = await res.json();
+        const select = document.getElementById('selectOtica');
+        select.innerHTML = '<option value="">-- Selecione uma Ótica --</option>';
+        oticas.forEach(o => {
+            select.innerHTML += `<option value="${o.id}">${o.nome} (CNPJ: ${o.cnpj})</option>`;
+        });
+    }
+
+    async function carregarProdutos() {
+        const res = await fetch(`${API_URL}/produtos`);
+        produtosDisponiveis = await res.json();
+        const select = document.getElementById('selectProduto');
+        select.innerHTML = '<option value="">-- Selecione um Produto --</option>';
+        produtosDisponiveis.forEach(p => {
+            select.innerHTML += `<option value="${p.id}">${p.modelo} (${p.marca}) - R$ ${parseFloat(p.preco).toFixed(2)}</option>`;
+        });
+    }
+
+    function adicionarProduto() {
+        const produtoId = parseInt(document.getElementById('selectProduto').value);
+        const qtd = parseInt(document.getElementById('qtdProduto').value);
+
+        if (!produtoId || qtd <= 0) {
+            alert("Selecione um produto e informe uma quantidade válida!");
+            return;
+        }
+
+        const produtoObj = produtosDisponiveis.find(p => p.id === produtoId);
+        
+        // Verifica se já está no carrinho
+        const itemExistente = carrinho.find(item => item.produto_id === produtoId);
+        if (itemExistente) {
+            itemExistente.quantidade += qtd;
+        } else {
+            carrinho.push({
+                produto_id: produtoObj.id,
+                nome: `${produtoObj.modelo} (${produtoObj.marca})`,
+                preco_unitario: parseFloat(produtoObj.preco),
+                quantidade: qtd
+            });
+        }
+
+        atualizarCarrinhoUI();
+    }
+
+    function alterarQuantidade(index, novaQtd) {
+        const qtd = parseInt(novaQtd);
+        if (qtd <= 0) {
+            removerProduto(index);
+        } else {
+            carrinho[index].quantidade = qtd;
+            atualizarCarrinhoUI();
+        }
+    }
+
+    function removerProduto(index) {
+        carrinho.splice(index, 1);
+        atualizarCarrinhoUI();
+    }
+
+    function atualizarCarrinhoUI() {
+        const tbody = document.getElementById('tabelaItens');
+        tbody.innerHTML = '';
+
+        if (carrinho.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Nenhum produto adicionado ao pedido.</td></tr>';
+            document.getElementById('lblQtdTotal').innerText = '0';
+            document.getElementById('lblValorTotal').innerText = '0.00';
+            return;
+        }
+
+        let qtdTotal = 0;
+        let valorTotal = 0;
+
+        carrinho.forEach((item, index) => {
+            const subtotal = item.quantidade * item.preco_unitario;
+            qtdTotal += item.quantidade;
+            valorTotal += subtotal;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.nome}</td>
+                    <td>R$ ${item.preco_unitario.toFixed(2)}</td>
+                    <td>
+                        <input type="number" min="1" value="${item.quantidade}" 
+                            style="width: 70px; margin: 0;" 
+                            onchange="alterarQuantidade(${index}, this.value)">
+                    </td>
+                    <td>R$ ${subtotal.toFixed(2)}</td>
+                    <td>
+                        <button class="btn-danger" onclick="removerProduto(${index})">Remover</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('lblQtdTotal').innerText = qtdTotal;
+        document.getElementById('lblValorTotal').innerText = valorTotal.toFixed(2);
+    }
+
+    async function finalizarPedido() {
+        const oticaId = document.getElementById('selectOtica').value;
+
+        if (!oticaId) {
+            alert("Por favor, selecione uma Ótica!");
+            return;
+        }
+
+        if (carrinho.length === 0) {
+            alert("Adicione pelo menos um produto ao pedido!");
+            return;
+        }
+
+        const payload = {
+            otica_id: parseInt(oticaId),
+            itens: carrinho.map(item => ({
+                produto_id: item.produto_id,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario
+            }))
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/pedidos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(`🎉 Pedido Finalizado com Sucesso!\nNúmero do Pedido: ${data.numero_pedido}`);
+                carrinho = [];
+                document.getElementById('selectOtica').value = '';
+                atualizarCarrinhoUI();
+            } else {
+                alert("Erro ao finalizar pedido: " + (data.detail || "Erro no servidor"));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Erro de conexão com o servidor.");
+        }
+    }
+</script>
+
+</body>
+</html>

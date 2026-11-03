@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -42,6 +42,9 @@ class UsuarioSchema(BaseModel):
     nome: str
     email: str
     senha: str
+
+class StatusUpdateSchema(BaseModel):
+    novo_status: str
 
 
 # --- LOGIN ---
@@ -187,11 +190,11 @@ def cadastrar_produto(dados: ProdutoSchema):
         cursor.close()
         conn.close()
 
+
 # ==========================================
-# --- PEDIDOS (AC2) ---
+# --- PEDIDOS & GESTÃO (AC2 e AC3) ---
 # ==========================================
 
-# Schemas para o Pedido
 class ItemPedidoSchema(BaseModel):
     produto_id: int
     quantidade: int
@@ -201,7 +204,8 @@ class CriarPedidoSchema(BaseModel):
     otica_id: int
     itens: List[ItemPedidoSchema]
 
-# Rota para Criar/Finalizar o Pedido
+
+# Rota para Criar/Finalizar o Pedido (AC2)
 @app.post("/pedidos")
 def criar_pedido(dados: CriarPedidoSchema):
     if not dados.itens:
@@ -218,10 +222,10 @@ def criar_pedido(dados: CriarPedidoSchema):
         qtd_total = sum(item.quantidade for item in dados.itens)
         valor_total = sum(item.quantidade * item.preco_unitario for item in dados.itens)
         
-        # 3. Salvar Pedido Principal
+        # 3. Salvar Pedido Principal (Status inicial 'Pendente')
         query_pedido = """
-            INSERT INTO pedidos (numero_pedido, otica_id, quantidade_total, valor_total)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO pedidos (numero_pedido, otica_id, quantidade_total, valor_total, status)
+            VALUES (%s, %s, %s, %s, 'Pendente')
         """
         cursor.execute(query_pedido, (numero_pedido, dados.otica_id, qtd_total, valor_total))
         pedido_id = cursor.lastrowid
@@ -249,28 +253,58 @@ def criar_pedido(dados: CriarPedidoSchema):
         cursor.close()
         conn.close()
 
-        # Rota para Listar todos os Pedidos Realizados
+
+# Rota para Listar todos os Pedidos com Filtros Opcionais (AC3)
 @app.get("/pedidos")
-def listar_pedidos():
+def listar_pedidos(
+    busca: Optional[str] = None,
+    status: Optional[str] = None,
+    otica_id: Optional[int] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None
+):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
         query = """
             SELECT p.id, p.numero_pedido, o.nome AS otica_nome, 
-                   p.quantidade_total, p.valor_total, 
+                   p.quantidade_total, p.valor_total, p.status,
                    DATE_FORMAT(p.data_criacao, '%d/%m/%Y %H:%i') AS data_formatada
             FROM pedidos p
             INNER JOIN oticas o ON p.otica_id = o.id
-            ORDER BY p.id DESC
+            WHERE 1=1
         """
-        cursor.execute(query)
-        pedidos = cursor.fetchall()
-        return pedidos
+        params = []
+
+        if busca:
+            query += " AND (p.numero_pedido LIKE %s OR o.nome LIKE %s)"
+            params.extend([f"%{busca}%", f"%{busca}%"])
+        
+        if status:
+            query += " AND p.status = %s"
+            params.append(status)
+            
+        if otica_id:
+            query += " AND p.otica_id = %s"
+            params.append(otica_id)
+            
+        if data_inicio:
+            query += " AND DATE(p.data_criacao) >= %s"
+            params.append(data_inicio)
+            
+        if data_fim:
+            query += " AND DATE(p.data_criacao) <= %s"
+            params.append(data_fim)
+
+        query += " ORDER BY p.id DESC"
+        cursor.execute(query, tuple(params))
+        return cursor.fetchall()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         conn.close()
+
 
 # Rota para Listar os itens de um Pedido específico
 @app.get("/pedidos/{pedido_id}/itens")
@@ -279,14 +313,82 @@ def listar_itens_pedido(pedido_id: int):
     cursor = conn.cursor(dictionary=True)
     try:
         query = """
-            SELECT i.id, prod.modelo, prod.marca, i.quantidade, i.preco_unitario, i.subtotal
+            SELECT i.id, prod.modelo, m.nome AS marca, i.quantidade, i.preco_unitario, i.subtotal
             FROM itens_pedido i
             INNER JOIN produtos prod ON i.produto_id = prod.id
+            LEFT JOIN marcas m ON prod.marca_id = m.id
             WHERE i.pedido_id = %s
         """
         cursor.execute(query, (pedido_id,))
-        itens = cursor.fetchall()
-        return itens
+        return cursor.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# Rota para Alterar o Status e Salvar no Histórico (AC3)
+@app.put("/pedidos/{pedido_id}/status")
+def alterar_status_pedido(pedido_id: int, dados: StatusUpdateSchema):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # 1. Busca o status atual do pedido
+        cursor.execute("SELECT status FROM pedidos WHERE id = %s", (pedido_id,))
+        pedido = cursor.fetchone()
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        
+        status_anterior = pedido.get('status') or 'Pendente'
+        novo_status = dados.novo_status
+
+        # Se for o mesmo status, não grava histórico repetido
+        if status_anterior == novo_status:
+            return {"mensagem": "O pedido já está com este status"}
+
+        # 2. Atualiza a coluna status na tabela 'pedidos'
+        cursor.execute("UPDATE pedidos SET status = %s WHERE id = %s", (novo_status, pedido_id))
+
+        # 3. Insere o registro na tabela 'historico_status'
+        query_hist = """
+            INSERT INTO historico_status (pedido_id, status_anterior, status_novo) 
+            VALUES (%s, %s, %s)
+        """
+        cursor.execute(query_hist, (pedido_id, status_anterior, novo_status))
+
+        # 4. Confirma as alterações no Banco de Dados
+        conn.commit()
+        
+        return {"status": "sucesso", "mensagem": "Status e histórico atualizados!"}
+    except Exception as e:
+        conn.rollback()
+        print(f"ERRO AO GRAVAR HISTÓRICO: {e}") # Exibe o erro no terminal
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# Rota para Consultar o Histórico de um Pedido (AC3)
+@app.get("/pedidos/{pedido_id}/historico")
+def obter_historico_pedido(pedido_id: int):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        query = """
+            SELECT 
+                id,
+                status_anterior,
+                status_novo,
+                DATE_FORMAT(data_alteracao, '%d/%m/%Y %H:%i') as data_formatada
+            FROM historico_status
+            WHERE pedido_id = %s
+            ORDER BY data_alteracao DESC
+        """
+        cursor.execute(query, (pedido_id,))
+        historico = cursor.fetchall()
+        return historico
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

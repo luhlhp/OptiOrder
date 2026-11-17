@@ -29,6 +29,9 @@
             <button class="btn btn-outline-secondary" onclick="carregarPedidos()">
                 <i class="bi bi-arrow-clockwise"></i> Atualizar
             </button>
+            <button class="btn btn-success" onclick="exportarCSV()">
+                <i class="bi bi-file-earmark-excel"></i> Exportar Excel (CSV)
+            </button>
         </div>
 
         <!-- PAINEL DE FILTROS -->
@@ -346,6 +349,46 @@
                 alert("Erro ao carregar histórico.");
             }
         }
+        
+     function exportarCSV() {
+            const tabela = document.getElementById("tabelaPedidos").closest("table");
+            const linhas = tabela.querySelectorAll("tr");
+            
+            if (linhas.length <= 1) {
+                alert("Não há pedidos na tabela para exportar.");
+                return;
+            }
+
+            let csv = [];
+            csv.push("ID;Numero Pedido;Otica;Data;Valor Total;Status");
+
+            for (let i = 1; i < linhas.length; i++) {
+                const colunas = linhas[i].querySelectorAll("td");
+                if (colunas.length >= 6) {
+                    const dadosLinha = [
+                        colunas[0].innerText.trim(),
+                        colunas[1].innerText.trim(),
+                        colunas[2].innerText.trim(),
+                        colunas[3].innerText.trim(),
+                        colunas[4].innerText.trim().replace("R$", "").trim(),
+                        colunas[5].innerText.trim()
+                    ];
+                    csv.push(dadosLinha.join(";"));
+                }
+            }
+
+            const csvString = "\uFEFF" + csv.join("\n");
+            const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `relatorio_pedidos_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     </script>
 </body>
 </html>
+
